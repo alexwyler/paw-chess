@@ -21,6 +21,9 @@ WHITE_OOO = 1 << 1
 BLACK_OO = 1 << 2
 BLACK_OOO = 1 << 3
 
+PROMO_MAP = {"q": 5, "r": 4, "b": 3, "n": 2}
+PROMO_LETTER = {v: k for k, v in PROMO_MAP.items()}
+
 
 def on_board(idx: int) -> bool:
     return (idx & 0x88) == 0
@@ -43,6 +46,10 @@ def uci_to_idx(sq: str) -> int:
     f = ord(sq[0]) - ord("a")
     r = int(sq[1]) - 1
     return rf_to_idx(f, r)
+
+
+def promo_suffix(ptype: int) -> str:
+    return PROMO_LETTER.get(ptype, "")
 
 
 def make_piece_idx(color: int, ptype: int) -> int:

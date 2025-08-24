@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from typing import Optional
 
-from .board import Board, on_board
+from .board import Board, idx_to_uci, on_board, promo_suffix
 from .move import Move
 
 
@@ -27,6 +27,18 @@ def main(argv: Optional[list[str]] = None) -> int:
         if text in {"q", "quit", "exit"}:
             print("bye")
             return 0
+        if text in {"m", "moves"}:
+            from .movegen import generate_pseudo_legal
+
+            ms = generate_pseudo_legal(board)
+            print(
+                "moves:",
+                " ".join(
+                    f"{idx_to_uci(m.frm)}{idx_to_uci(m.to)}{promo_suffix(m.promo)}"
+                    for m in ms
+                ),
+            )
+            continue
         if not text:
             continue
         try:

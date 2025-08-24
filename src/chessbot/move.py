@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .board import PROMO_MAP
+
 FLAG_NONE = 0
 FLAG_PROMOTION = 1 << 0
 FLAG_EN_PASSANT = 1 << 1
 FLAG_CASTLE = 1 << 2
 FLAG_DOUBLE_PAWN = 1 << 3
-
-PROMO_MAP = {"q": 5, "r": 4, "b": 3, "n": 2}
 
 
 @dataclass(frozen=True)
