@@ -58,7 +58,7 @@ ROOK_DELTAS = (+1, -1, +_rank_dist, -_rank_dist)
 QUEEN_DELTAS = BISHOP_DELTAS + ROOK_DELTAS
 
 
-def generate_pseudo_legal(board: Board) -> List[Move]:
+def _generate_pseudo_legal(board: Board) -> List[Move]:
     """Return pseudo-legal moves for the side to move."""
     side = board.side_to_move
     out: List[Move] = []
@@ -86,6 +86,43 @@ def generate_pseudo_legal(board: Board) -> List[Move]:
             out.extend(castle_candidates(board, idx))
 
     return out
+
+
+def generate_legal(board: Board) -> List[Move]:
+    side = board.side_to_move
+    opp = BLACK if side == WHITE else WHITE
+    legal: List[Move] = []
+
+    pre_in_check = in_check(board, side)
+
+    for m in _generate_pseudo_legal(board):
+        # Can't castle while in check / through check
+        if m.flags & FLAG_CASTLE:
+            if pre_in_check:
+                continue
+            to_file = m.to & 7
+            if side == WHITE:
+                e1 = rf_to_idx(4, 0)
+                cross = rf_to_idx(5, 0) if to_file == 6 else rf_to_idx(3, 0)
+                if is_square_attacked(board, e1, by_color=opp) or is_square_attacked(
+                    board, cross, by_color=opp
+                ):
+                    continue
+            else:
+                e8 = rf_to_idx(4, 7)
+                cross = rf_to_idx(5, 7) if to_file == 6 else rf_to_idx(3, 7)
+                if is_square_attacked(board, e8, by_color=opp) or is_square_attacked(
+                    board, cross, by_color=opp
+                ):
+                    continue
+
+        prev = board.make_move(m.frm, m.to, m.promo or None)
+        # Can't result in check
+        if not in_check(board, side):
+            legal.append(m)
+        board.undo_move(prev)
+
+    return legal
 
 
 def leaper_moves(board: Board, frm: int, deltas: tuple[int, ...]) -> List[Move]:
@@ -227,3 +264,78 @@ def castle_candidates(board: Board, king_from: int) -> List[Move]:
             moves.append(Move(e8, c8, flags=FLAG_CASTLE))
 
     return moves
+
+
+def king_square(board: Board, color: int) -> int:
+    for idx in range(128):
+        if not on_board(idx):
+            continue
+        piece = board.squares[idx]
+        if piece != EMPTY and piece_color(piece) == color and piece_type(piece) == KING:
+            return idx
+    raise RuntimeError("King not found")
+
+
+def is_square_attacked(board: Board, sq: int, by_color: int) -> bool:
+    squares = board.squares
+
+    # Pawn
+    if by_color == WHITE:
+        for d in (-_rank_dist - 1, -_rank_dist + 1):  # sq - 17, sq - 15
+            frm = sq + d
+            if on_board(frm):
+                p = squares[frm]
+                if p and piece_color(p) == WHITE and piece_type(p) == PAWN:
+                    return True
+    else:
+        for d in (_rank_dist - 1, _rank_dist + 1):  # sq + 15, sq + 17
+            frm = sq + d
+            if on_board(frm):
+                p = squares[frm]
+                if p and piece_color(p) == BLACK and piece_type(p) == PAWN:
+                    return True
+
+    # Knight
+    for d in KNIGHT_DELTAS:
+        frm = sq - d
+        if on_board(frm):
+            p = squares[frm]
+            if p and piece_color(p) == by_color and piece_type(p) == KNIGHT:
+                return True
+
+    # King
+    for d in KING_DELTAS:
+        frm = sq - d
+        if on_board(frm):
+            p = squares[frm]
+            if p and piece_color(p) == by_color and piece_type(p) == KING:
+                return True
+
+    # Bishop/Queen
+    for d in BISHOP_DELTAS:
+        frm = sq + d
+        while on_board(frm):
+            p = squares[frm]
+            if p:
+                if piece_color(p) == by_color and (piece_type(p) in (BISHOP, QUEEN)):
+                    return True
+                break
+            frm += d
+
+    # Rock/Queen
+    for d in ROOK_DELTAS:
+        frm = sq + d
+        while on_board(frm):
+            p = squares[frm]
+            if p:
+                if piece_color(p) == by_color and (piece_type(p) in (ROOK, QUEEN)):
+                    return True
+                break
+            frm += d
+
+    return False
+
+
+def in_check(board: Board, color: int) -> bool:
+    ksq = king_square(board, color)
+    return is_square_attacked(board, ksq, by_color=BLACK if color == WHITE else WHITE)

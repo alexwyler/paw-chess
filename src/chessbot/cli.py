@@ -28,9 +28,9 @@ def main(argv: Optional[list[str]] = None) -> int:
             print("bye")
             return 0
         if text in {"m", "moves"}:
-            from .movegen import generate_pseudo_legal
+            from .movegen import generate_legal
 
-            ms = generate_pseudo_legal(board)
+            ms = generate_legal(board)
             print(
                 "moves:",
                 " ".join(
